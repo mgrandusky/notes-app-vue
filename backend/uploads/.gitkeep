@@ -1,1 +1,2 @@
-# Keep this directory for file uploads
+# This directory stores uploaded files
+# .gitkeep ensures the directory is tracked by git
