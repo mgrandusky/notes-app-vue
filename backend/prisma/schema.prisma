@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  GITHUB
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SharePermission {
+  VIEW
+  EDIT
+}
+
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  password      String?       // null for OAuth users
+  firstName     String?
+  lastName      String?
+  displayName   String?
+  avatar        String?
+  authProvider  AuthProvider  @default(LOCAL)
+  providerId    String?       // OAuth provider user ID
+  role          Role          @default(USER)
+  isVerified    Boolean       @default(false)
+  verificationToken String?
+  resetPasswordToken String?
+  resetPasswordExpires DateTime?
+  lastLogin     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  notes         Note[]
+  sharedNotes   SharedNote[]
+  shares        Share[]
+  chatMessages  ChatMessage[]
+
+  @@index([email])
+  @@index([authProvider, providerId])
+}
+
+model Note {
+  id            String        @id @default(uuid())
+  title         String
+  content       String        @db.Text
+  tags          String[]
+  color         String?
+  isPinned      Boolean       @default(false)
+  isArchived    Boolean       @default(false)
+  isTrashed     Boolean       @default(false)
+  userId        String
+  folderId      String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  trashedAt     DateTime?
+  
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions      NoteVersion[]
+  sharedWith    SharedNote[]
+  shares        Share[]
+  attachments   Attachment[]
+  embeddings    NoteEmbedding[]
+
+  @@index([userId])
+  @@index([userId, isTrashed])
+  @@index([userId, isArchived])
+  @@index([userId, isPinned])
+  @@index([tags])
+}
+
+model SharedNote {
+  id            String          @id @default(uuid())
+  noteId        String
+  userId        String
+  permission    SharePermission @default(VIEW)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  note          Note            @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, userId])
+  @@index([userId])
+  @@index([noteId])
+}
+
+model Share {
+  id            String          @id @default(uuid())
+  noteId        String
+  userId        String
+  shareToken    String          @unique
+  permission    SharePermission @default(VIEW)
+  expiresAt     DateTime?
+  accessCount   Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  note          Note            @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@index([userId])
+  @@index([shareToken])
+}
+
+model NoteVersion {
+  id            String        @id @default(uuid())
+  noteId        String
+  title         String
+  content       String        @db.Text
+  version       Int
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  note          Note          @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@index([noteId, createdAt])
+}
+
+model Attachment {
+  id            String        @id @default(uuid())
+  noteId        String
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  path          String
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  note          Note          @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+}
+
+model NoteEmbedding {
+  id            String        @id @default(uuid())
+  noteId        String
+  embedding     Float[]       // Vector embedding for AI search
+  content       String        @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  note          Note          @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+}
+
+model ChatMessage {
+  id            String        @id @default(uuid())
+  userId        String
+  role          String        // 'user' or 'assistant'
+  content       String        @db.Text
+  noteContext   String?       @db.Text // Optional note content for context
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
