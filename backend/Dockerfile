@@ -6,17 +6,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install ALL dependencies (including devDependencies for TypeScript compilation)
-RUN npm ci
+# Install dependencies
+RUN npm ci --only=production
 
 # Copy application code
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate
-
 # Expose port
 EXPOSE 4000
 
-# Start the application with ts-node or tsx
-CMD ["npx", "tsx", "src/index.ts"]
+# Start the application
+CMD ["npm", "start"]
