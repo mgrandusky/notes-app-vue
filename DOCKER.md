@@ -169,10 +169,10 @@ Check `VITE_API_URL` in frontend environment and CORS settings in backend.
 
 ```bash
 # Backup
-docker-compose exec postgres pg_dump -U user notesapp_vue &gt; backup.sql
+docker-compose exec postgres pg_dump -U user notesapp_vue > backup.sql
 
 # Restore
-docker-compose exec -T postgres psql -U user notesapp_vue &lt; backup.sql
+docker-compose exec -T postgres psql -U user notesapp_vue < backup.sql
 ```
 
 ## Cleanup
